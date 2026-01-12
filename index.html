@@ -2,25 +2,102 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
+
+<!-- 🔑 TO JEST KLUCZ DO TELEFONU -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
 <title>🧅 Bank Cebuli</title>
+
 <style>
-body{font-family:Arial;background:#f2f4f8;margin:0}
-.container{max-width:420px;margin:auto;padding:20px}
-.card{background:#fff;padding:20px;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,.1);margin-bottom:20px}
-h1,h2{text-align:center;color:#003087}
-input,select,button{width:100%;padding:12px;margin-top:10px;border-radius:8px;font-size:15px}
-button{background:#0070e0;color:#fff;border:none;cursor:pointer}
-button:hover{background:#005bb5}
-.saldo{font-size:32px;text-align:center}
-.small{text-align:center;color:#666;font-size:13px}
-.logout{background:#ccc;color:#000}
+*{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body{
+  font-family:Arial, sans-serif;
+  background:#f2f4f8;
+  margin:0;
+  padding:0;
+}
+
+.container{
+  max-width:420px;
+  margin:auto;
+  padding:16px;
+}
+
+.card{
+  background:#fff;
+  padding:16px;
+  border-radius:14px;
+  box-shadow:0 6px 18px rgba(0,0,0,.12);
+  margin-bottom:16px;
+}
+
+h1,h2{
+  text-align:center;
+  color:#003087;
+  margin:10px 0;
+}
+
+input,select,button{
+  width:100%;
+  padding:14px;
+  margin-top:10px;
+  border-radius:10px;
+  font-size:16px;
+}
+
+input,select{
+  border:1px solid #ccc;
+}
+
+button{
+  background:#0070e0;
+  color:#fff;
+  border:none;
+  cursor:pointer;
+}
+
+button:active{
+  transform:scale(0.98);
+}
+
+.logout{
+  background:#e0e0e0;
+  color:#000;
+}
+
+.saldo{
+  font-size:36px;
+  text-align:center;
+  font-weight:bold;
+}
+
+.small{
+  text-align:center;
+  color:#666;
+  font-size:13px;
+  margin-top:8px;
+}
+
 #app{display:none}
+
+/* 📱 EXTRA MOBILE */
+@media (max-width:480px){
+  .saldo{font-size:32px}
+  h1{font-size:26px}
+  h2{font-size:20px}
+}
 </style>
 </head>
+
 <body>
 
 <div class="container">
 
+<!-- AUTH -->
 <div id="auth" class="card">
 <h1>🧅 Bank Cebuli</h1>
 <input id="email" placeholder="Email">
@@ -30,7 +107,9 @@ button:hover{background:#005bb5}
 <p id="msg" class="small"></p>
 </div>
 
+<!-- APP -->
 <div id="app">
+
 <div class="card">
 <h2>Saldo</h2>
 <div class="saldo"><span id="saldo">0</span> 🧅</div>
@@ -46,119 +125,121 @@ button:hover{background:#005bb5}
 </div>
 
 <div class="card">
-<button class="logout" onclick="logout()">Wyloguj</button>
-</div>
+<h2>Dodaj cebuliony</h2>
+<input id="addAmount" type="number" placeholder="Ilość">
+<button onclick="addCebuliony()">Dodaj</button>
+<p id="addMsg" class="small"></p>
 </div>
 
+<div class="card">
+<button class="logout" onclick="logout()">Wyloguj</button>
+<button class="logout" onclick="deleteAccount()">Usuń konto 🗑️</button>
+</div>
+
+</div>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAuth,
+createUserWithEmailAndPassword,
+signInWithEmailAndPassword,
+onAuthStateChanged,
+signOut,
+deleteUser } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import {
+getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc,
+collection, getDocs
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// ===== Firebase Config =====
 const firebaseConfig = {
-  apiKey:"AIzaSyBZRmANw06xJYdYnGbC2l_XcEnGy9UiVNM",
-  authDomain:"cebula-8d0d5.firebaseapp.com",
-  projectId:"cebula-8d0d5",
-  storageBucket:"cebula-8d0d5.appspot.com",
-  messagingSenderId:"585390317442",
-  appId:"1:585390317442:web:7ce7285161574fbfac399b"
+apiKey:"AIzaSyBZRmANw06xJYdYnGbC2l_XcEnGy9UiVNM",
+authDomain:"cebula-8d0d5.firebaseapp.com",
+projectId:"cebula-8d0d5",
+storageBucket:"cebula-8d0d5.appspot.com",
+messagingSenderId:"585390317442",
+appId:"1:585390317442:web:7ce7285161574fbfac399b"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// ===== HTML Elements =====
-const authDiv = document.getElementById("auth");
-const appDiv = document.getElementById("app");
-const saldoSpan = document.getElementById("saldo");
-const usersSelect = document.getElementById("users");
-const msg = document.getElementById("msg");
-const transferMsg = document.getElementById("transferMsg");
-const userEmail = document.getElementById("userEmail");
-const amount = document.getElementById("amount");
+const authDiv=document.getElementById("auth");
+const appDiv=document.getElementById("app");
+const saldoSpan=document.getElementById("saldo");
+const usersSelect=document.getElementById("users");
+const userEmail=document.getElementById("userEmail");
+const amount=document.getElementById("amount");
+const addAmount=document.getElementById("addAmount");
 
-// ===== Functions =====
-window.register = async () => {
-  try {
-    const cred = await createUserWithEmailAndPassword(auth,email.value,password.value);
-    await setDoc(doc(db,"bankCebuli",cred.user.uid), { email: cred.user.email, cebule: 100 });
-    email.value = ""; password.value = "";
-  } catch(e){ msg.textContent = e.message; }
+window.register=async()=>{
+const c=await createUserWithEmailAndPassword(auth,email.value,password.value);
+await setDoc(doc(db,"bankCebuli",c.user.uid),{email:c.user.email,cebule:100});
 };
 
-window.login = async () => {
-  try {
-    await signInWithEmailAndPassword(auth,email.value,password.value);
-    email.value = ""; password.value = "";
-  } catch(e){ msg.textContent = e.message; }
-};
+window.login=()=>signInWithEmailAndPassword(auth,email.value,password.value);
+window.logout=()=>signOut(auth);
 
-window.logout = async () => {
-  await signOut(auth);
-};
-
-onAuthStateChanged(auth, async (user) => {
-  if(user){
-    authDiv.style.display = "none";
-    appDiv.style.display = "block";
-    userEmail.textContent = user.email;
-    loadSaldo();
-    loadUsers();
-  } else {
-    authDiv.style.display = "block";
-    appDiv.style.display = "none";
-    msg.textContent = "";
-  }
+onAuthStateChanged(auth,async u=>{
+if(u){
+authDiv.style.display="none";
+appDiv.style.display="block";
+userEmail.textContent=u.email;
+loadSaldo();loadUsers();
+}else{
+authDiv.style.display="block";
+appDiv.style.display="none";
+}
 });
 
 async function loadSaldo(){
-  const snap = await getDoc(doc(db,"bankCebuli",auth.currentUser.uid));
-  if(snap.exists()) saldoSpan.textContent = snap.data().cebule;
+const s=await getDoc(doc(db,"bankCebuli",auth.currentUser.uid));
+saldoSpan.textContent=s.data().cebule;
 }
 
 async function loadUsers(){
-  usersSelect.innerHTML = "";
-  const usersSnap = await getDocs(collection(db,"bankCebuli"));
-  usersSnap.forEach(u=>{
-    if(u.id !== auth.currentUser.uid){
-      const opt = document.createElement("option");
-      opt.value = u.id;
-      opt.textContent = u.data().email;
-      usersSelect.appendChild(opt);
-    }
-  });
+usersSelect.innerHTML="";
+const s=await getDocs(collection(db,"bankCebuli"));
+s.forEach(u=>{
+if(u.id!==auth.currentUser.uid){
+const o=document.createElement("option");
+o.value=u.id;o.textContent=u.data().email;
+usersSelect.appendChild(o);
+}});
 }
 
-// ===== Poprawiony przelew =====
-window.send = async () => {
-  const toId = usersSelect.value;
-  const amountNum = Number(amount.value);
+window.send=async()=>{
+const v=Number(amount.value);
+const to=usersSelect.value;
+if(v<=0)return;
+const f=doc(db,"bankCebuli",auth.currentUser.uid);
+const t=doc(db,"bankCebuli",to);
+const fs=await getDoc(f);
+if(fs.data().cebule<v)return alert("Za mało cebul");
+await updateDoc(f,{cebule:fs.data().cebule-v});
+const ts=await getDoc(t);
+await updateDoc(t,{cebule:ts.data().cebule+v});
+amount.value="";
+loadSaldo();
+};
 
-  if(!toId) return alert("Wybierz odbiorcę");
-  if(!amountNum || amountNum <=0) return alert("Wpisz poprawną ilość cebul");
+window.addCebuliony=async()=>{
+const v=Number(addAmount.value);
+if(v<=0)return;
+const r=doc(db,"bankCebuli",auth.currentUser.uid);
+const s=await getDoc(r);
+await updateDoc(r,{cebule:s.data().cebule+v});
+addAmount.value="";
+loadSaldo();
+};
 
-  const fromRef = doc(db,"bankCebuli",auth.currentUser.uid);
-  const toRef = doc(db,"bankCebuli",toId);
-
-  const fromSnap = await getDoc(fromRef);
-  const toSnap = await getDoc(toRef);
-
-  if(!fromSnap.exists() || !toSnap.exists()) return alert("Błąd: użytkownik nie istnieje");
-  if(fromSnap.data().cebule < amountNum) return alert("Masz za mało cebul!");
-
-  // Aktualizacja sald w trybie „bezpiecznym” (sekwencyjnie)
-  await updateDoc(fromRef, { cebule: fromSnap.data().cebule - amountNum });
-  await updateDoc(toRef, { cebule: toSnap.data().cebule + amountNum });
-
-  transferMsg.textContent = `Przesłano ${amountNum} 🧅 do ${toSnap.data().email}`;
-  amount.value = "";
-  loadSaldo();
-  loadUsers();
+window.deleteAccount=async()=>{
+if(!confirm("Usunąć konto na zawsze?"))return;
+await deleteDoc(doc(db,"bankCebuli",auth.currentUser.uid));
+await deleteUser(auth.currentUser);
 };
 </script>
+
 </body>
 </html>
